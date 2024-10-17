@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- sample -->
+<mapper namespace="Users">
+
+	<!-- 데이터 조회(Read) 1. 전체조회 2. 상세조회 3. 검색 - column & keyword 검색 (정적바인딩, 동적바인딩) 
+		- 복합 검색 (모든 항목이 있을 수도 없을 수도 있는 검색) -->
+
+	<insert id="insert">
+		INSERT INTO users (
+        users_id,
+        users_name,
+        users_password,
+        users_email,
+        users_contact,
+        users_type
+    ) VALUES (
+        #{usersId},
+        #{usersName},
+        #{usersPassword},
+        #{usersEmail},
+        #{usersContact},
+        #{usersType}
+    )
+	</insert>
+
+	<select id="list" resultType="UserDto">
+		select * from users
+	</select>
+
+
+	<select id="find" resultType="UserDto">
+		select * from users where users_id
+		= #{usersId}
+	</select>
+
+</mapper>
