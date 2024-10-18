@@ -1,0 +1,8 @@
+.list-group-item h5 {
+    cursor: pointer; /* 커서를 포인터로 변경 */
+    transition: color 0.3s; /* 색상 변화에 부드러운 효과 추가 */
+}
+
+.list-group-item h5:hover {
+    color: #007bff; /* 마우스 오버 시 색상 변경 */
+}
