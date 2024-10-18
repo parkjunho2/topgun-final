@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="flight">
+  
+<!-- 등록 -->
+<insert id="add">
+    insert into flight(
+        flight_id, flight_number, departure_time, arrival_time, flight_time, 
+        departure_airport, arrival_airport, user_id, flight_total_seat
+    )
+    values(
+        flight_seq.nextval, #{flightNumber}, #{departureTime}, #{arrivalTime}, 
+        #{flightTime}, #{departureAirport}, #{arrivalAirport}, 
+        #{userId}, #{flightTotalSeat}
+    )
+</insert>
+
+<!-- 목록 -->
+<select id="list" resultType="FlightDto">
+    SELECT * FROM Flight ORDER BY flight_id ASC
+</select>
+
+<!-- 상세 -->
+<select id="find" resultType="FlightDto">
+    SELECT * FROM Flight WHERE flight_id = #{flightId}
+</select>
+
+<!-- 수정 -->
+<update id="fix">
+    UPDATE Flight 
+    SET flight_number = #{flightNumber}, 
+        departure_time = #{departureTime}, 
+        arrival_time = #{arrivalTime}, 
+        flight_time = #{flightTime}, 
+        departure_airport = #{departureAirport}, 
+        arrival_airport = #{arrivalAirport}, 
+        flight_total_seat = #{flightTotalSeat}, 
+        flight_status = #{flightStatus}
+    WHERE flight_id = #{flightId}
+</update>
+
+<!-- 삭제 -->
+<delete id="del">
+    DELETE FROM Flight WHERE flight_id = #{flightId}
+</delete>  
+  
+  </mapper>

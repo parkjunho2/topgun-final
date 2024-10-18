@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- sample -->
+<mapper namespace="userToken">
+
+	<insert id="insert">
+		insert into users_token(
+		token_no, token_target,
+		token_value
+		)
+		values(users_token_seq.nextval, #{tokenTarget},
+		#{tokenValue})
+	</insert>
+
+
+	<select id="check" resultType="UserTokenDto">
+		select * from users_token
+		where
+		token_target = #{tokenTarget}
+		and
+		token_value = #{tokenValue}
+	</select>
+
+	<delete id="delete">
+		delete users_token
+		where
+		token_target = #{tokenTarget}
+		and
+		token_value = #{tokenValue}
+	</delete>
+
+	<delete id="clear">
+		<![CDATA[
+		delete users_token where token_time <= sysdate-1
+		]]>
+	</delete>
+</mapper>

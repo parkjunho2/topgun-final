@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="message">
+	
+	<!-- 시퀀스 생성 -->
+	<select id="sequence" resultType="int">
+		select message_seq.nextval from dual
+	</select>
+	
+	<!-- 메세지 등록 -->
+	<insert id="insert">
+		insert into message
+		(
+			message_no, message_type, message_sender, message_receiver, 
+			message_content, message_time, room_no
+		)
+		values(
+			#{messageNo}, #{messageType}, #{messageSender}, 
+			#{messageReceiver, jdbcType=VARCHAR},
+			#{messageConten}, #{messageTime}, #{roomNo}
+		)
+	</insert>
+	
+	<select id="listMessage" resultType="MessageVO">
+		<include refid="top-n-header"></include>
+		select 
+			M.message_no "no",
+			M.message_type "type",
+			M.message_sender "sender_users_id",
+			U.users_type "sender_users_level",
+			M.message_receiver "receiver_users_id",
+			M.message_content "content",
+			M.message_time "time"
+		from 
+			message M 
+				left outer join users U 
+					on M.message_sender = U.users_id
+		<!-- 일반채팅(chat) + 나의DM만 조회 --> 
+		where 
+			<!-- 방 번호에 대한 조건 -->
+			room_no = #{roomNo}
+			and
+		<!-- 조회할 채팅에 대한 조건 -->
+		(
+			M.message_type = 'chat'
+			<!-- DM은 회원만(usersId != null) 조회 -->
+			<if test="usersId != null">
+			or
+			(
+				M.message_type = 'dm' 
+				and
+				(
+					M.message_sender = #{usersrId}
+					or
+					M.message_receiver = #{usersId}
+				) 
+			)			
+			</if>
+		)
+			<!-- 더보기를 위한 조건 추가 : firstMessageNo가 있으면 -->
+			<if test="firstMessageNo != null">
+			<![CDATA[
+			and message_no < #{firstMessageNo}
+			]]>
+			</if>
+		order by M.message_no desc
+		<include refid="top-n-footer"></include>
+		<!-- top n query로 만들어진 최종 결과를 다시 정렬(별칭 사용 불가) -->
+		order by "no" asc		
+	</select>
+	
+	<sql id="top-n-header">
+		<if test="beginRow != null and endRow != null">
+		select * from (
+  			select rownum rn, TMP.* from(
+  		</if>
+	</sql>
+	<sql id="top-n-footer">
+		<if test="beginRow != null and endRow != null">
+		 	)TMP
+		)
+		where rn between #{beginRow} and #{endRow}
+		</if>
+	</sql>
+	
+</mapper>
