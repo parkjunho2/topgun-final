@@ -26,14 +26,13 @@
 	</select>
 	
 	<select id="listByUser" resultType="RoomVO">
-		select
-			R.*, nvl(RM.users_id, 'Y', 'N') "join"
-		from
+		select 
+			R.*, nvl2(RM.users_id, 'Y', 'N') "join"
+		from 
 			room R left outer join (
 				select * from room_member where users_id = #{usersId}
 			) RM
 				on R.room_no = RM.room_no
-		order by R.room_no asc
 	</select>
 	
 </mapper>
