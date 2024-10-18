@@ -7,7 +7,7 @@ import { IoCall } from "react-icons/io5";
 import './Login.css'; // 스타일을 위한 CSS 파일
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useRecoilState } from 'recoil';
-import { userState } from '../../util/recoil';
+import { memberLoadingState, userState } from '../../util/recoil';
 
 const Login = () => {
 
@@ -205,13 +205,13 @@ const Login = () => {
                     <div className="col-md-8 col-lg-6 col-xl-4 offset-xl-1">
                         <div className="d-flex flex-row align-items-center justify-content-center justify-content-lg-start">
                             <p className="lead fw-normal mb-0 me-3">Sign in with</p>
-                            <button type="button" className="btn btn-primary btn-floating mx-1">
+                            <button type="button" className="btn btn-primary mx-1">
                                 <FaFacebookF />
                             </button>
-                            <button type="button" className="btn btn-primary btn-floating mx-1">
+                            <button type="button" className="btn btn-primary mx-1">
                                 <FaTwitter />
                             </button>
-                            <button type="button" className="btn btn-primary btn-floating mx-1">
+                            <button type="button" className="btn btn-primary mx-1">
                                 <FaLinkedinIn />
                             </button>
                         </div>

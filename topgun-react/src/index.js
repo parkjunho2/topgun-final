@@ -10,7 +10,7 @@ import { BrowserRouter } from 'react-router-dom';
 //axios customize
 import axios from 'axios';
 
-axios.defaults.timeout = 2000;
+axios.defaults.timeout = 5000;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

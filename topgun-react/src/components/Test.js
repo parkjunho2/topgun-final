@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
 import moment from 'moment';
+import { Oval } from 'react-loading-icons';
 
 const Test = () => {
   const [exchangeRates, setExchangeRates] = useState({ inr: null, krw: null });
@@ -17,26 +18,26 @@ const Test = () => {
   const getExchangeRates = useCallback(async () => {
     const url = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${fromCurrency}.json`;
     try {
-        const response = await axios.get(url, {
-            headers: {
-                // Authorization 헤더를 명시적으로 제거
-                Authorization: undefined, // 또는 삭제
-            },
+      const response = await axios.get(url, {
+        headers: {
+          // Authorization 헤더를 명시적으로 제거
+          Authorization: undefined, // 또는 삭제
+        },
+      });
+
+      const data = response.data;
+      if (data[fromCurrency]) {
+        setExchangeRates({
+          inr: data[fromCurrency]['inr'],
+          krw: data[fromCurrency]['krw'],
         });
-        
-        const data = response.data;
-        if (data[fromCurrency]) {
-            setExchangeRates({
-                inr: data[fromCurrency]['inr'],
-                krw: data[fromCurrency]['krw'],
-            });
-        } else {
-            console.error("환율 데이터가 없습니다.");
-        }
+      } else {
+        console.error("환율 데이터가 없습니다.");
+      }
     } catch (error) {
-        console.error("환율 조회 중 오류 발생:", error);
+      console.error("환율 조회 중 오류 발생:", error);
     }
-}, []);
+  }, []);
 
 
   const getWeatherData = useCallback(async () => {
@@ -45,12 +46,12 @@ const Test = () => {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m&daily=weathercode&timezone=Asia%2FSeoul`;
 
     try {
-      const response = await axios.get(url,{
+      const response = await axios.get(url, {
         headers: {
-            // Authorization 헤더를 명시적으로 제거
-            Authorization: undefined, // 또는 삭제
+          // Authorization 헤더를 명시적으로 제거
+          Authorization: undefined, // 또는 삭제
         },
-    });
+      });
       const data = response.data;
       if (data.current_weather) {
         setCurrWeather(data.current_weather);
@@ -129,7 +130,9 @@ const Test = () => {
   };
 
   if (loading) {
-    return <p>로딩 중...</p>; // 날짜 선택 후 로딩 메시지
+    return (<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Oval stroke="#000" strokeWidth={3} />
+    </div>);
   }
 
   return (
@@ -149,7 +152,9 @@ const Test = () => {
           <p>{`측정 시간: ${new Date(currWeather.time).toLocaleString()} (UTC)`}</p>
         </>
       ) : (
-        <p>현재 날씨를 가져오는 중입니다...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Oval stroke="#000" strokeWidth={3} />
+        </div>
       )}
 
       <h2>날짜 선택</h2>

@@ -21,18 +21,18 @@
 
 <!-- 목록 -->
 <select id="list" resultType="FlightDto">
-    SELECT * FROM Flight ORDER BY flight_id ASC
+    select * from flight order by flight_id asc
 </select>
 
 <!-- 상세 -->
 <select id="find" resultType="FlightDto">
-    SELECT * FROM Flight WHERE flight_id = #{flightId}
+    select * from flight where flight_id = #{flight_id}
 </select>
 
 <!-- 수정 -->
 <update id="fix">
-    UPDATE Flight 
-    SET flight_number = #{flightNumber}, 
+    update flight 
+    set flight_number = #{flightNumber}, 
         departure_time = #{departureTime}, 
         arrival_time = #{arrivalTime}, 
         flight_time = #{flightTime}, 
@@ -40,12 +40,12 @@
         arrival_airport = #{arrivalAirport}, 
         flight_total_seat = #{flightTotalSeat}, 
         flight_status = #{flightStatus}
-    WHERE flight_id = #{flightId}
+    where flight_id = #{flightId}
 </update>
 
 <!-- 삭제 -->
 <delete id="del">
-    DELETE FROM Flight WHERE flight_id = #{flightId}
+    delete flight where flight_id = #{flightId}
 </delete>  
   
   </mapper>
