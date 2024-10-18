@@ -10,9 +10,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer{
 	@Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/private");
-        config.setApplicationDestinationPrefixes("/app");
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+		registry.enableSimpleBroker("/private");
+		registry.setApplicationDestinationPrefixes("/app");
     }
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {

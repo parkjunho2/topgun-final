@@ -23,10 +23,10 @@ public class RoomDao {
 		sqlSession.insert("room.insert", roomDto);
 	}
 	public List<RoomDto> selectList(){
-		return sqlSession.selectOne("room.list");
+		return sqlSession.selectList("room.list");
 	}
 	public List<RoomVO> selectList(String usersId){
-		return sqlSession.selectOne("room.listByUser", usersId);
+		return sqlSession.selectList("room.listByUser", usersId);
 	}
 	public RoomDto selectOne(int roomNo) {
 		return sqlSession.selectOne("room.detail", roomNo);

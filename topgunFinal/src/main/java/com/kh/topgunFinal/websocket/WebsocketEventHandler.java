@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.stereotype.Service;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
@@ -20,6 +21,7 @@ import com.kh.topgunFinal.vo.MessageMoreVO;
 import com.kh.topgunFinal.vo.MessageVO;
 import com.kh.topgunFinal.vo.UserClaimVO;
 
+@Service
 public class WebsocketEventHandler {
 	@Autowired
 	private TokenService tokenService;
@@ -41,8 +43,10 @@ public class WebsocketEventHandler {
 		UserClaimVO claimVO = tokenService.check(tokenService.removeBearer(accessToken));
 		
 		userList.put(sessionId, claimVO.getUserId());
+//		log.info("사용자 접속! 인원수 = {},  세션 = {} , 아이디 = {}", userList.size(), sessionId, claimVO.getUserId());
 	}
 	
+	//채널 구독
 	@EventListener
 	public void userSubscribe(SessionConnectEvent event) {
 		StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());

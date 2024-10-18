@@ -14,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import com.kh.topgunFinal.dao.MessageDao;
 import com.kh.topgunFinal.dao.RoomDao;
 import com.kh.topgunFinal.dto.MessageDto;
+import com.kh.topgunFinal.dto.RoomMemberDto;
 import com.kh.topgunFinal.service.TokenService;
 import com.kh.topgunFinal.vo.MessageRequestVO;
 import com.kh.topgunFinal.vo.MessageResponseVO;
@@ -40,6 +41,12 @@ public class MessageController {
 		
 		UserClaimVO claimVO = tokenService.check(tokenService.removeBearer(accessToken));
 		
+		RoomMemberDto roomMemberDto = new RoomMemberDto();
+		roomMemberDto.setUsersId(claimVO.getUserId());
+		roomMemberDto.setRoomNo(roomNo);
+		boolean canEnter = roomDao.check(roomMemberDto);
+		if(canEnter == false) return;
+		
 		MessageRequestVO request = message.getPayload();
 		
 		//메세지 발송
@@ -48,19 +55,21 @@ public class MessageController {
 		response.setSenderUsersType(claimVO.getUserType());
 		response.setTime(LocalDateTime.now());
 		response.setContent(request.getContent());
-		messagingTemplate.convertAndSend("/private/chate/"+roomNo, response);
+		messagingTemplate.convertAndSend("/private/chat/"+roomNo, response);
 		
-		//DB 저장
-		int messageNo = messageDao.sequence();
-		MessageDto messageDto = new MessageDto();
-		messageDto.setMessageNo(messageNo);
-		messageDto.setMessageSender(claimVO.getUserId());
-		messageDto.setMessageReceiver(null);
-		messageDto.setMessageContent(request.getContent());
-		messageDto.setMessageType("chat");
-		messageDto.setMessageTime(Timestamp.valueOf(response.getTime()));
-		messageDto.setRoomNo(roomNo);
-		messageDao.insert(messageDto);
+		// DB 저장
+	    int messageNo = messageDao.sequence();
+	    MessageDto messageDto = new MessageDto();
+	    messageDto.setMessageNo(messageNo);
+	    messageDto.setMessageType("chat");
+	    messageDto.setMessageSender(claimVO.getUserId());
+	    messageDto.setMessageReceiver(null);
+	    messageDto.setMessageContent(request.getContent());
+	    messageDto.setMessageTime(Timestamp.valueOf(response.getTime()));
+	    messageDto.setRoomNo(roomNo);
+	    
+	    // 여기서 insert 호출
+	    messageDao.insert(messageDto);
 	}
 	
 }

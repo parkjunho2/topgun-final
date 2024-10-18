@@ -21,7 +21,7 @@
 		values(
 			#{messageNo}, #{messageType}, #{messageSender}, 
 			#{messageReceiver, jdbcType=VARCHAR},
-			#{messageConten}, #{messageTime}, #{roomNo}
+			#{messageContent}, #{messageTime}, #{roomNo}
 		)
 	</insert>
 	
@@ -54,7 +54,7 @@
 				M.message_type = 'dm' 
 				and
 				(
-					M.message_sender = #{usersrId}
+					M.message_sender = #{usersId}
 					or
 					M.message_receiver = #{usersId}
 				) 
