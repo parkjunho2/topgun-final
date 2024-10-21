@@ -24,7 +24,8 @@ import Admin from './components/Admin';
 import NotMemberRoute from './components/Route/NotMemberRoute';
 import AirLine from './components/AirLine.js';
 import Chat from './components/chat/Chat';
-import Notice from './components/notice.js'; // Notice 컴포넌트 임포트
+import Notice from './components/notice/notice.js'; // Notice 컴포넌트 임포트
+import NoticeDetail from './components/notice/noticeDetail.js'; // Notice 컴포넌트 임포트
 
 
 
@@ -114,8 +115,9 @@ const App = () => {
           <Route path="/airline" element={<AirLine />} />
         </Route>
 
-        {/* 공지사항 페이지 추가 */}
-        <Route path="/notice" element={<Notice />} />  {/* Notice 페이지 경로 설정 */}
+         {/* 공지사항 페이지 추가 */}
+         <Route path="/notice" element={<Notice />} />  {/* Notice 페이지 경로 설정 */}
+        <Route path="/notice/:noticeId" element={<NoticeDetail />} /> {/* NoticeDetail 페이지 경로 설정 */}
 
         <Route path="/flight" element={<Flight />} />
         <Route path="*" element={<NotFound />} /> {/* 모든 잘못된 경로 처리 */}
