@@ -7,6 +7,6 @@ import lombok.Data;
 @Data
 public class RoomDto {
 	private int roomNo;
-	private String RoomName;
+	private String roomName;
 	private Timestamp roomCreate;
 }

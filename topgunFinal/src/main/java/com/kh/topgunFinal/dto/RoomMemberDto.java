@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class RoomMemberDto {
-	private int RoomNo;
-	private String memberId;
+	private int roomNo;
+	private String usersId;
 }
