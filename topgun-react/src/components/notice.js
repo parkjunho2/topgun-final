@@ -1,27 +1,9 @@
 import { useCallback, useState, useEffect } from "react";
 import { FaTrash } from "react-icons/fa";
+import axios from "axios"; // Axios 추가
 
 const NoticeBoard = () => {
-    const sampleNotices = [
-        {
-            notice_id: 1,
-            title: "첫 번째 공지사항",
-            content: "첫 번째 공지사항의 내용입니다.",
-            author: "관리자",
-            createdAt: "2024-10-17T10:00",
-            status: "공개"
-        },
-        {
-            notice_id: 2,
-            title: "두 번째 공지사항",
-            content: "두 번째 공지사항의 내용입니다.",
-            author: "관리자",
-            createdAt: "2024-10-14T15:00", // 3일 전
-            status: "비공개"
-        }
-    ];
-
-    const [noticeList, setNoticeList] = useState(sampleNotices);
+    const [noticeList, setNoticeList] = useState([]);
     const [input, setInput] = useState({
         title: "",
         content: "",
@@ -30,13 +12,28 @@ const NoticeBoard = () => {
     });
 
     useEffect(() => {
-        // loadList(); // API 호출은 생략
+        loadList(); // 컴포넌트가 렌더링될 때 공지사항 목록 불러오기
     }, []);
 
-    const deleteNotice = useCallback((target) => {
+    // 공지사항 목록 불러오기
+    const loadList = useCallback(async () => {
+        try {
+            const response = await axios.get("http://localhost:8080/notice/");
+            setNoticeList(response.data);
+        } catch (error) {
+            console.error("Failed to load notice list:", error);
+        }
+    }, []);
+
+    const deleteNotice = useCallback(async (target) => {
         const choice = window.confirm("정말 삭제하시겠습니까?");
         if (choice) {
-            setNoticeList(prevNotices => prevNotices.filter(notice => notice.notice_id !== target.notice_id));
+            try {
+                await axios.delete(`http://localhost:8080/notice/${target.notice_id}`);
+                setNoticeList(prevNotices => prevNotices.filter(notice => notice.notice_id !== target.notice_id));
+            } catch (error) {
+                console.error("Failed to delete notice:", error);
+            }
         }
     }, []);
 
@@ -48,14 +45,22 @@ const NoticeBoard = () => {
         }));
     }, []);
 
-    const addInput = useCallback(() => {
+    const addInput = useCallback(async () => {
         const newNotice = {
-            notice_id: noticeList.length + 1,
-            ...input
+            title: input.title,
+            content: input.content,
+            author: input.author,
+            createdAt: input.createdAt,
         };
-        setNoticeList(prevNotices => [...prevNotices, newNotice]);
-        clearInput();
-    }, [input, noticeList]);
+
+        try {
+            await axios.post("http://localhost:8080/notice/", newNotice);
+            loadList(); // 공지사항 추가 후 목록 갱신
+            clearInput();
+        } catch (error) {
+            console.error("Failed to add notice:", error);
+        }
+    }, [input, loadList]);
 
     const clearInput = useCallback(() => {
         setInput({
@@ -66,7 +71,6 @@ const NoticeBoard = () => {
         });
     }, []);
 
-    // 현재 날짜 기준 3일 전 날짜 계산
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
@@ -76,7 +80,7 @@ const NoticeBoard = () => {
                 <table className="table" style={{ width: '80%', tableLayout: 'fixed' }}>
                     <thead>
                         <tr>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>번호</th> {/* 게시글 번호 */}
+                            <th style={{ padding: '15px', textAlign: 'center' }}>글번호</th>
                             <th style={{ padding: '15px', textAlign: 'center' }}>제목</th>
                             <th style={{ padding: '15px', textAlign: 'center' }}>작성자</th>
                             <th style={{ padding: '15px', textAlign: 'center' }}>작성일</th>
@@ -86,13 +90,13 @@ const NoticeBoard = () => {
                     <tbody>
                         {noticeList.map((notice) => (
                             <tr key={notice.notice_id}>
-                                <td style={{ padding: '15px', textAlign: 'center' }}>{notice.notice_id}</td> {/* 번호 추가 */}
+                                <td style={{ padding: '15px', textAlign: 'center' }}>{notice.notice_id}</td>
                                 <td style={{ padding: '15px', textAlign: 'center' }}>
                                     {notice.title}
                                     {new Date(notice.createdAt) >= threeDaysAgo && 
                                         <span style={{ 
                                             color: 'white', 
-                                            backgroundColor: '#ec7393',  // 배경색 변경
+                                            backgroundColor: '#ec7393', 
                                             padding: '3px 3px', 
                                             borderRadius: '5px', 
                                             fontSize: '0.9em', 
@@ -112,7 +116,7 @@ const NoticeBoard = () => {
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td style={{ textAlign: 'center' }}></td> {/* 번호 칸 추가 (빈 공간) */}
+                            <td style={{ textAlign: 'center' }}></td>
                             <td>
                                 <input type="text" className="form-control"
                                        placeholder="제목"
