@@ -1,6 +1,8 @@
 import { useCallback, useState, useEffect } from "react";
 import { FaTrash } from "react-icons/fa";
-import axios from "axios"; // Axios 추가
+import axios from "axios";
+import ReactQuill from "react-quill";
+import 'react-quill/dist/quill.snow.css';  // Quill 테마
 
 const NoticeBoard = () => {
     const [noticeList, setNoticeList] = useState([]);
@@ -8,14 +10,13 @@ const NoticeBoard = () => {
         title: "",
         content: "",
         author: "",
-        createdAt: new Date().toISOString().slice(0, 16),
+        createdAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
     });
 
     useEffect(() => {
-        loadList(); // 컴포넌트가 렌더링될 때 공지사항 목록 불러오기
+        loadList();
     }, []);
 
-    // 공지사항 목록 불러오기
     const loadList = useCallback(async () => {
         try {
             const response = await axios.get("http://localhost:8080/notice/");
@@ -29,8 +30,8 @@ const NoticeBoard = () => {
         const choice = window.confirm("정말 삭제하시겠습니까?");
         if (choice) {
             try {
-                await axios.delete(`http://localhost:8080/notice/${target.notice_id}`);
-                setNoticeList(prevNotices => prevNotices.filter(notice => notice.notice_id !== target.notice_id));
+                await axios.delete(`http://localhost:8080/notice/${target.noticeId}`); // 수정된 부분
+                setNoticeList(prevNotices => prevNotices.filter(notice => notice.noticeId !== target.noticeId)); // 수정된 부분
             } catch (error) {
                 console.error("Failed to delete notice:", error);
             }
@@ -45,29 +46,36 @@ const NoticeBoard = () => {
         }));
     }, []);
 
+    const handleContentChange = useCallback(value => {
+        setInput(prevInput => ({
+            ...prevInput,
+            content: value
+        }));
+    }, []);
+
     const addInput = useCallback(async () => {
         const newNotice = {
             title: input.title,
             content: input.content,
             author: input.author,
-            createdAt: input.createdAt,
+            createdAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
         };
 
         try {
-            await axios.post("http://localhost:8080/notice/", newNotice);
-            loadList(); // 공지사항 추가 후 목록 갱신
+            const response = await axios.post("http://localhost:8080/notice/", newNotice);
+            setNoticeList(prevNotices => [...prevNotices, response.data]);
             clearInput();
         } catch (error) {
             console.error("Failed to add notice:", error);
         }
-    }, [input, loadList]);
+    }, [input]);
 
     const clearInput = useCallback(() => {
         setInput({
             title: "",
             content: "",
             author: "",
-            createdAt: new Date().toISOString().slice(0, 16),
+            createdAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
         });
     }, []);
 
@@ -80,28 +88,29 @@ const NoticeBoard = () => {
                 <table className="table" style={{ width: '80%', tableLayout: 'fixed' }}>
                     <thead>
                         <tr>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>글번호</th>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>제목</th>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>작성자</th>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>작성일</th>
-                            <th style={{ padding: '15px', textAlign: 'center' }}>메뉴</th>
+                            <th style={{ padding: '15px', textAlign: 'center', width: '10%' }}>글번호</th> {/* 글번호 칸의 너비 조정 */}
+                            <th style={{ padding: '15px', textAlign: 'center', width: '30%' }}>제목</th>
+                            <th style={{ padding: '15px', textAlign: 'center', width: '20%' }}>작성자</th>
+                            <th style={{ padding: '15px', textAlign: 'center', width: '30%' }}>작성일</th> {/* 작성일 칸의 너비 조정 */}
+                            <th style={{ padding: '15px', textAlign: 'center', width: '10%' }}>메뉴</th>
                         </tr>
                     </thead>
                     <tbody>
                         {noticeList.map((notice) => (
-                            <tr key={notice.notice_id}>
-                                <td style={{ padding: '15px', textAlign: 'center' }}>{notice.notice_id}</td>
+                            <tr key={notice.noticeId}>
+                                <td style={{ padding: '15px', textAlign: 'center' }}>
+                                    {notice.noticeId}</td>
                                 <td style={{ padding: '15px', textAlign: 'center' }}>
                                     {notice.title}
-                                    {new Date(notice.createdAt) >= threeDaysAgo && 
-                                        <span style={{ 
-                                            color: 'white', 
-                                            backgroundColor: '#ec7393', 
-                                            padding: '3px 3px', 
-                                            borderRadius: '5px', 
-                                            fontSize: '0.9em', 
-                                            marginLeft: '10px', 
-                                            marginBottom: '10px' 
+                                    {new Date(notice.createdAt) >= threeDaysAgo &&
+                                        <span style={{
+                                            color: 'white',
+                                            backgroundColor: '#ec7393',
+                                            padding: '3px 3px',
+                                            borderRadius: '5px',
+                                            fontSize: '0.9em',
+                                            marginLeft: '10px',
+                                            marginBottom: '10px'
                                         }}>
                                             NEW
                                         </span>}
@@ -119,30 +128,35 @@ const NoticeBoard = () => {
                             <td style={{ textAlign: 'center' }}></td>
                             <td>
                                 <input type="text" className="form-control"
-                                       placeholder="제목"
-                                       name="title"
-                                       value={input.title}
-                                       onChange={changeInput} />
+                                    placeholder="제목"
+                                    name="title"
+                                    value={input.title}
+                                    onChange={changeInput} />
                             </td>
                             <td>
                                 <input type="text" className="form-control"
-                                       placeholder="작성자"
-                                       name="author"
-                                       value={input.author}
-                                       onChange={changeInput} />
-                            </td>
-                            <td>
-                                <input type="datetime-local" className="form-control"
-                                       name="createdAt"
-                                       value={input.createdAt}
-                                       onChange={changeInput} />
+                                    placeholder="작성자"
+                                    name="author"
+                                    value={input.author}
+                                    onChange={changeInput} />
                             </td>
                             <td style={{ textAlign: 'center' }}>
                                 <button type="button"
-                                        className="btn btn-success"
-                                        onClick={addInput}>
+                                    className="btn btn-success"
+                                    onClick={addInput}>
                                     등록
                                 </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colSpan="5">
+                                <ReactQuill
+                                    theme="snow"
+                                    value={input.content}
+                                    onChange={handleContentChange}
+                                    placeholder="내용을 입력하세요..."
+                                    style={{ height: '200px' }} // 높이 조정
+                                />
                             </td>
                         </tr>
                     </tfoot>
