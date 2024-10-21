@@ -1,24 +1,49 @@
 import { useCallback, useState } from 'react';
 import axios from 'axios'; // Axios import
 import { FaFacebookF, FaTwitter, FaLinkedinIn } from 'react-icons/fa';
-import { MdEmail, MdLock } from 'react-icons/md';
+import { MdAirlines, MdEmail, MdLock } from 'react-icons/md';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
-import { IoCall } from "react-icons/io5";
+import { IoCalendar, IoCall } from "react-icons/io5";
 import './Login.css'; // 스타일을 위한 CSS 파일
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useRecoilState } from 'recoil';
-import { memberLoadingState, userState } from '../../util/recoil';
+import { userState } from '../../util/recoil';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { debounce } from 'lodash';
 
 const Login = () => {
 
-    // 정규식: 숫자와 특수 문자가 포함된 패턴
-    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$]).+$/;
+    // 정규식: 숫자와 특수 문자, 대문자 한개 이상이 포함된 패턴
+    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$])(?=.*[A-Z]).{8,}$/;
+
+    //
+    const idRegex = /^[a-z][a-z0-9]{4,19}$/;
+
+    // 이름은 2자 이상, 7자 이하이며, 한글만 허용
+    const nameRegex = /^[가-힣]{2,7}$/;
+
+    // 영문 이름은 2~10자 이내이며, 띄어쓰기가 포함된 First, Last Name 형식
+    const nameEngRegex = /^(?=.*[a-zA-Z])([a-zA-Z\s]{2,10})$/;
+
+    // 전화번호 
+    const contactRegex = /^010[1-9][0-9]{6,7}$/;
+
+    // 이메일 정규 표현식
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    //navigate
+    const navigate = useNavigate();
 
     //recoil state
     const [, setUser] = useRecoilState(userState);
 
-    const navigate = useNavigate();
     // State
+    // 비밀번호 재검증시 사용할 state
+    const [pwCheck, setPwCheck] = useState('');
+
+    const [isDuplicate, setIsDuplicate] = useState(false); // 중복 여부 상태 추가
+
     // 로그인 상태 관리
     const [loginData, setLoginData] = useState({
         usersId: '',
@@ -39,7 +64,7 @@ const Login = () => {
         usersType: '',
         //회원이라면
         memberEngName: '',
-        memberBirth: '',
+        memberBirth: null,
         memberGender: '',
         //항공사라면
         airlineName: '',
@@ -48,28 +73,76 @@ const Login = () => {
 
     // 유효성 검사 상태 관리
     const [validation, setValidation] = useState({
-        usersIdValid: false,
-        usersPasswordValid: false,
-        passwordMatch: false
+        usersIdValid: null,
+        usersPasswordValid: null,
+        passwordMatch: null,
+        memberNameValid: null,
+        memberEngNameValid: null,
+        usersContactValid: null,
+        usersEmailValid: null,
+        memberGenderValid: null,
+        memberBirthValid: null, // 초기값을 null로 설정
+        // airlineIdValid: null,
+        // airlineNameValid: null,
     });
 
-    // 아이디, 패스워드 유효성 검사 함수
-    const validateForm = () => {
-        // 아이디가 비어 있지 않으면 true
-        const isUsersIdValid = joinData.usersId.trim() !== '';
-        // 패스워드가 비어 있지 않고, 정규식 조건을 만족하면 true
-        const isUsersPasswordValid = joinData.usersPassword.trim() !== '' && passwordRegex.test(joinData.usersPassword);
-        // 패스워드와 재확인 패스워드가 같으면 true
-        const isPasswordMatch = joinData.usersPassword === joinData.passwordRe;
+    const CheckDuplicateUserId = useCallback(
+        debounce(async (userId) => {
+            console.log(userId); // userId 확인
+            try {
+                const response = await axios.post('http://localhost:8080/users/checkId', null, {
+                    params: { userId: userId } // 쿼리 파라미터로 전달
+                });
+                console.log(response.data); // 서버 응답 확인
+                setIsDuplicate(response.data); // 중복 여부 상태 업데이트
+            } catch (error) {
+                console.error("Error checking user ID:", error); // 에러 처리
+                setIsDuplicate(true); // 오류 발생 시 중복으로 간주
+            }
+        }, 200), // 200ms 후에 실행
+        [] // 의존성 배열 비워두기
+    );
 
-        setValidation({
-            usersIdValid: isUsersIdValid,
-            usersPasswordValid: isUsersPasswordValid,
-            passwordMatch: isPasswordMatch,
-        });
+    // 개별 입력의 유효성 검사 함수
+    // 아이디
+    const validateUserId = (id) => {
+        return id.trim() !== '' && idRegex.test(id);
     };
 
+    const validateContact = (contact) => {
+        return contact.trim() !== '' && contactRegex.test(contact);
+    }
 
+    const validatePassword = (password) => {
+        return password.trim() !== '' && passwordRegex.test(password);
+    };
+
+    // 이름 유효성 검사 함수
+    const validateName = (name) => {
+        return nameRegex.test(name);
+    };
+
+    // 영문 이름 유효성 검사 함수
+    const validateEngName = (engName) => {
+        return nameEngRegex.test(engName);
+    };
+
+    // 이메일 유효성 검사 함수
+    const validateEmail = (emailId, domain) => {
+        const fullEmail = `${emailId}@${domain}`;
+        setValidation(prev => ({
+            ...prev,
+            usersEmailValid: emailPattern.test(fullEmail), // 전체 이메일 형식 검사
+        }));
+    };
+
+    // 기본적으로 필수 필드 유효성 검사
+    const isBasicValid = validation.usersIdValid &&
+        !isDuplicate &&
+        validation.usersPasswordValid &&
+        validation.passwordMatch;
+
+    // useCallback
     // Handler
     const InputJoinChange = useCallback(e => {
         setJoinData({
@@ -154,8 +227,8 @@ const Login = () => {
     const calculateProgress = () => {
         if (userType === 'MEMBER') {
             return ((currentPage + 1) / totalPages) * 100;
-        } else if (userType === 'airline') {
-            return 100; // 항공사 회원은 단일 페이지이므로 100%
+        } else if (userType === 'AIRLINE') {
+            return ((currentPage + 1) / totalPages) * 100;
         }
         return 0;
     };
@@ -166,16 +239,25 @@ const Login = () => {
 
     // 입력값 변경 핸들러
     const handleIdChange = (e) => {
-        setEmailId(e.target.value);
+        const newEmailId = e.target.value;
+        setEmailId(newEmailId);
+        validateEmail(newEmailId, domain); // 이메일 유효성 검사
     };
 
     const handleDomainChange = (e) => {
-        setDomain(e.target.value);
+        const newDomain = e.target.value;
+        setDomain(newDomain);
+        validateEmail(emailId, newDomain); // 이메일 유효성 검사
+    };
+
+    // 이메일 ID와 도메인을 합치는 함수
+    const getFullEmail = () => {
+        return `${emailId}@${domain}`;
     };
 
     // 이메일 ID와 도메인을 합쳐서 데이터를 전송하는 함수
     const sendData = useCallback(async () => {
-        const fullEmail = `${emailId}@${domain}`;
+        const fullEmail = getFullEmail();
         const dataToSend = {
             ...joinData,
             usersType: userType,
@@ -195,7 +277,7 @@ const Login = () => {
             <div className="container-fluid h-custom mt-5">
                 <div className="row d-flex justify-content-center align-items-center h-100">
                     <div className="col-md-9 col-lg-6 col-xl-5">
-                        {/* 샘플 이미지 */}
+                        {/* 샘플 이미지 나중에 이미지 수정 필요 */}
                         <img
                             src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/draw2.webp"
                             className="img-fluid"
@@ -225,7 +307,7 @@ const Login = () => {
                                 type="text"
                                 id="formId"
                                 className="form-control form-control-lg"
-                                placeholder="아이디를 입력하세요" // 안쓰지만 써야함
+                                placeholder="아이디" // 안쓰지만 써야함
                                 value={loginData.usersId}
                                 onChange={InputChange}
                                 onKeyDown={KeyDown}
@@ -242,7 +324,7 @@ const Login = () => {
                                 type='password'
                                 id="formPassword"
                                 className="form-control form-control-lg"
-                                placeholder="비밀번호를 입력하세요" // 안쓰지만 써야함
+                                placeholder="비밀번호" // 안쓰지만 써야함
                                 value={loginData.usersPw}
                                 onChange={InputChange}
                                 onKeyDown={KeyDown}
@@ -265,7 +347,7 @@ const Login = () => {
                                 />
                                 <label className="form-check-label" htmlFor="formRemember">Remember me</label>
                             </div>
-                            <NavLink to="#!" className="text-body">Forgot password?</NavLink>
+                            <NavLink to="/findPw" className="text-body">Forgot password?</NavLink>
                         </div>
 
                         <div className="text-center text-lg-start mt-4 pt-2 mb-0">
@@ -294,7 +376,45 @@ const Login = () => {
                         {/* 헤더 */}
                         <div className="modal-header">
                             <h5 className="modal-title" id="staticBackdropLabel">회원 가입</h5>
-                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"
+                                onClick={() => {
+                                    setJoinData({
+                                        usersId: '',
+                                        usersPassword: '',
+                                        usersName: '',
+                                        usersEmail: '',
+                                        usersContact: '',
+                                        usersType: '', // 새로 설정된 userType을 joinData에 반영
+                                        //회원이라면
+                                        memberEngName: '',
+                                        memberBirth: '',
+                                        memberGender: '',
+                                        //항공사라면
+                                        airlineName: '',
+                                        airlineNo: '',
+                                    });
+                                    setValidation({
+                                        usersIdValid: null,
+                                        usersPasswordValid: null,
+                                        passwordMatch: null,
+                                        memberNameValid: null,
+                                        memberEngNameValid: null,
+                                        usersContactValid: null,
+                                        usersEmailValid: null,
+                                        memberGenderValid: null,
+                                        memberBirthValid: null, // 초기값을 null로 설정
+                                        airlineIdValid: null,
+                                        airlineNameValid: null,
+                                    });
+                                    setCurrentPage(0); // 변경 사항: 유저 타입 변경 시 페이지 초기화
+                                    setEmailId('');
+                                    setDomain('');
+                                }}
+                            />
                         </div>
 
                         {/* 유저 타입 선택 */}
@@ -308,7 +428,39 @@ const Login = () => {
                                     checked={userType === 'MEMBER'}
                                     onChange={() => {
                                         setUserType('MEMBER');
+                                        // joinData의 usersType도 업데이트
+                                        setJoinData(() => ({
+                                            usersId: '',
+                                            usersPassword: '',
+                                            usersName: '',
+                                            usersEmail: '',
+                                            usersContact: '',
+                                            usersType: 'MEMBER', // 새로 설정된 userType을 joinData에 반영
+                                            //회원이라면
+                                            memberEngName: '',
+                                            memberBirth: '',
+                                            memberGender: '',
+                                            //항공사라면
+                                            airlineName: '',
+                                            airlineNo: '',
+                                        }));
+                                        setPwCheck('');
+                                        setValidation({
+                                            usersIdValid: null,
+                                            usersPasswordValid: null,
+                                            passwordMatch: null,
+                                            memberNameValid: null,
+                                            memberEngNameValid: null,
+                                            usersContactValid: null,
+                                            usersEmailValid: null,
+                                            memberGenderValid: null,
+                                            memberBirthValid: null, // 초기값을 null로 설정
+                                            airlineIdValid: null,
+                                            airlineNameValid: null,
+                                        });
                                         setCurrentPage(0); // 변경 사항: 유저 타입 변경 시 페이지 초기화
+                                        setEmailId('');
+                                        setDomain('');
                                     }} />
                                 <label className="form-check-label" htmlFor="MemberForm">회원</label>
                             </div>
@@ -318,16 +470,43 @@ const Login = () => {
                                     type="radio"
                                     id="AirLineForm"
                                     name="userType"
-                                    value="airline"
-                                    checked={userType === 'airline'}
+                                    value="AIRLINE"
+                                    checked={userType === 'AIRLINE'}
                                     onChange={() => {
-                                        setUserType('airline');
+                                        setUserType('AIRLINE');
                                         // joinData의 usersType도 업데이트
-                                        setJoinData((prevData) => ({
-                                            ...prevData,
-                                            usersType: userType, // 새로 설정된 userType을 joinData에 반영
+                                        setJoinData(() => ({
+                                            usersId: '',
+                                            usersPassword: '',
+                                            usersName: '',
+                                            usersEmail: '',
+                                            usersContact: '',
+                                            usersType: 'AIRLINE', // 새로 설정된 userType을 joinData에 반영
+                                            //회원이라면
+                                            memberEngName: '',
+                                            memberBirth: '',
+                                            memberGender: '',
+                                            //항공사라면
+                                            airlineName: '',
+                                            airlineNo: '',
                                         }));
+                                        setPwCheck('');
+                                        setValidation({
+                                            usersIdValid: null,
+                                            usersPasswordValid: null,
+                                            passwordMatch: null,
+                                            memberNameValid: null,
+                                            memberEngNameValid: null,
+                                            usersContactValid: null,
+                                            usersEmailValid: null,
+                                            memberGenderValid: null,
+                                            memberBirthValid: null, // 초기값을 null로 설정
+                                            airlineIdValid: null,
+                                            airlineNameValid: null,
+                                        });
                                         setCurrentPage(0); // 변경 사항: 유저 타입 변경 시 페이지 초기화
+                                        setEmailId('');
+                                        setDomain('');
                                     }}
                                 />
                                 <label className="form-check-label" htmlFor="AirLineForm">항공사</label>
@@ -343,7 +522,7 @@ const Login = () => {
                                     {/* 프로그레스 바 추가 */}
                                     <div className="progress my-3"> {/* 변경 사항: 프로그레스 바 컨테이너 추가 */}
                                         <div
-                                            className="progress-bar"
+                                            className="progress-bar bg-success progress-bar-striped progress-bar-animated"
                                             role="progressbar"
                                             style={{ width: `${calculateProgress()}%` }} // 변경 사항: 프로그레스 바 너비 설정
                                             aria-valuenow={calculateProgress()}
@@ -357,36 +536,83 @@ const Login = () => {
                                     <div className={`page ${currentPage !== 0 ? 'd-none' : ''}`}> {/* 변경 사항: currentPage에 따라 클래스 적용 */}
 
                                         <big>아이디</big>
-                                        <div className="input-group mb-3">
+                                        <div className="input-group has-validation">
                                             <span className="input-group-text">ID</span>
-                                            <div className={`form-floating ${validation.usersIdValid ? 'is-valid' : 'is-invalid'} flex-grow-1`}>
+                                            <div className={`form-floating ${isDuplicate || (validation.usersIdValid === false) ? 'is-invalid' : (validation.usersIdValid ? 'is-valid' : '')}`}>
                                                 <input
                                                     type="text"
-                                                    className={`form-control ${validation.usersIdValid ? 'is-valid' : 'is-invalid'}`}
-                                                    placeholder="Username"
+                                                    className={`form-control ${isDuplicate || (validation.usersIdValid === false) ? 'is-invalid' : (validation.usersIdValid ? 'is-valid' : '')}`}
+                                                    placeholder="아이디"
                                                     name="usersId"
                                                     value={joinData.usersId}
-                                                    onChange={InputJoinChange}
-                                                    onBlur={validateForm} // 폼 유효성 검사
+                                                    onChange={e => {
+                                                        InputJoinChange(e);
+                                                    }}
+                                                    onInput={e => {
+                                                        const userId = e.target.value; // 현재 입력된 값을 가져옴
+
+                                                        // 빈 문자열 체크
+                                                        if (userId.trim() === '') {
+                                                            setValidation(prev => ({
+                                                                ...prev,
+                                                                usersIdValid: null, // 유효성 초기화
+                                                            }));
+                                                            setIsDuplicate(false); // 중복 여부 초기화
+                                                            return; // 더 이상 진행하지 않음
+                                                        }
+
+                                                        InputJoinChange(e); // 입력 변경 함수 호출
+                                                        const isValid = validateUserId(userId); // 개별 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersIdValid: isValid,
+                                                        }));
+
+                                                        CheckDuplicateUserId(userId); // 현재 입력된 값으로 중복 검사
+                                                    }}
+                                                    id="floatingUserId" // 아이디 추가
                                                 />
-                                                <label>아이디</label>
+                                                <label htmlFor="floatingUserId">아이디</label>
                                             </div>
                                             {/* 유효성 검사에 따른 피드백 */}
-                                            {validation.usersIdValid ? (
-                                                <div className="valid-feedback">아주 멋진 아이디네요!</div>
-                                            ) : (
-                                                <div className="invalid-feedback">아이디를 입력해주세요.</div>
-                                            )}
+                                            <div className={`${isDuplicate ? 'invalid-feedback' : (validation.usersIdValid ? 'valid-feedback' : 'invalid-feedback')}`}>
+                                                {isDuplicate // 중복 여부 체크
+                                                    ? "이미 존재하는 아이디입니다." // 중복 시 피드백
+                                                    : validation.usersIdValid === true
+                                                        ? "아주 멋진 아이디네요!" // 유효성 검사가 통과했을 때
+                                                        : joinData.usersId.trim() === ''
+                                                            ? "아이디를 입력해주세요." // 빈 입력 시 피드백
+                                                            : validation.usersIdValid === false && joinData.usersId.trim() !== ''
+                                                                ? "아이디 형식이 올바르지 않습니다." // 유효성 검사 실패 시 피드백
+                                                                : null}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-4">
+                                            아이디는 소문자 알파벳으로 시작하며, 4~19자 사이의 길이로 소문자와 숫자로만 구성되어야 합니다.
                                         </div>
 
+
                                         <big>패스워드</big>
-                                        <div className="input-group has-validation mb-3">
+                                        <div className="input-group has-validation">
                                             <span className="input-group-text">PW</span>
-                                            <div className="form-floating flex-grow-1">
-                                                <input type={showPassword ? 'text' : 'password'} className={`form-control ${validation.usersPasswordValid ? 'is-valid' : 'is-invalid'}`} name='usersPassword' value={joinData.usersPassword} onChange={e => {
-                                                    InputJoinChange(e);  // 입력 변경 함수 호출
-                                                }} placeholder="패스워드를 입력하세요" />
-                                                <label>패스워드</label>
+                                            <div className={`form-floating ${validation.usersPasswordValid !== null ? (validation.usersPasswordValid ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    className={`form-control ${validation.usersPasswordValid !== null ? (validation.usersPasswordValid ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    name='usersPassword'
+                                                    value={joinData.usersPassword}
+                                                    onChange={e => {
+                                                        InputJoinChange(e); // 입력 변경 함수 호출
+                                                        const isValid = validatePassword(e.target.value); // 개별 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersPasswordValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="패스워드를 입력하세요"
+                                                    id="floatingPassword" // 아이디 추가
+                                                />
+                                                <label htmlFor="floatingPassword">패스워드</label>
                                                 <span
                                                     className="position-absolute"
                                                     style={{ right: '30px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}
@@ -395,22 +621,47 @@ const Login = () => {
                                                     {showPassword ? <FiEyeOff /> : <FiEye />}
                                                 </span>
                                             </div>
-                                            {validation.usersPasswordValid ? (
-                                                <div className="valid-feedback"></div>
-                                            ) : (
-                                                <div className="invalid-feedback">패스워드를 입력해주세요.</div>
-                                            )}
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={`${validation.usersPasswordValid === true ? 'valid-feedback' : 'invalid-feedback'}`}>
+                                                {validation.usersPasswordValid === true
+                                                    ? "유효한 비밀번호입니다!"
+                                                    : joinData.usersPassword.trim() === ''
+                                                        ? "비밀번호를 입력해주세요."
+                                                        : "비밀번호 형식이 올바르지 않습니다."}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-5">
+                                            비밀번호는 최소 8자 이상이어야 하며, 숫자, 특수 문자(!, @, #, $), 그리고 대문자가 각각 하나 이상 포함되어야 합니다.
                                         </div>
 
+
                                         <big>비밀번호 재확인</big>
-                                        <div className="input-group has-validation mb-3">
+                                        <div className="input-group has-validation mb-5">
                                             <span className="input-group-text">PW</span>
-                                            <div className="form-floating is-invalid flex-grow-1">
+                                            <div className={`form-floating ${validation.passwordMatch !== null ? (validation.passwordMatch ? 'is-valid' : 'is-invalid') : ''}`}>
                                                 <input
                                                     type={showPasswordRe ? 'text' : 'password'}
-                                                    className={`form-control ${validation.passwordMatch ? 'is-valid' : 'is-invalid'}`}
-                                                    placeholder="패스워드를 입력하세요" />
-                                                <label>패스워드 확인</label>
+                                                    value={pwCheck}
+                                                    onChange={e => {
+                                                        const value = e.target.value;
+                                                        setPwCheck(value);
+                                                    }}
+                                                    onBlur={e => {
+                                                        const value = e.target.value;
+                                                        setPwCheck(value);
+
+                                                        // 비밀번호 일치 여부 확인
+                                                        const isMatch = value.trim() !== '' && joinData.usersPassword === value;
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            passwordMatch: isMatch,
+                                                        }));
+                                                    }}
+                                                    className={`form-control ${validation.passwordMatch !== null ? (validation.passwordMatch ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    placeholder="패스워드를 입력하세요"
+                                                    id="floatingPasswordCheck" // 아이디 추가
+                                                />
+                                                <label htmlFor="floatingPasswordCheck">패스워드 확인</label>
                                                 <span
                                                     className="position-absolute"
                                                     style={{ right: '30px', top: '50%', transform: 'translateY(-50%)' }}
@@ -419,81 +670,208 @@ const Login = () => {
                                                     {showPasswordRe ? <FiEyeOff /> : <FiEye />}
                                                 </span>
                                             </div>
-
-                                            {validation.passwordMatch ? (
-                                                <div className="valid-feedback">패스워드가 일치합니다.</div>
-                                            ) : (
-                                                <div className="invalid-feedback">패스워드가 일치하지 않습니다.</div>
-                                            )}
-
+                                            <div className="invalid-feedback">패스워드가 일치하지 않습니다.</div>
                                         </div>
-
-
                                     </div>
 
                                     {/* 페이지 2 */}
                                     <div className={`page ${currentPage !== 1 ? 'd-none' : ''}`}> {/* 변경 사항: currentPage에 따라 클래스 적용 */}
 
                                         <big>이름</big>
-                                        <div className="input-group mb-3">
+                                        <div className="input-group has-validation mb-4">
                                             <span className="input-group-text">Name</span>
-                                            <div className="form-floating is-invalid">
-                                                <input type="text" className="form-control is-invalid" name="usersName" value={joinData.usersName} onChange={e => InputJoinChange(e)} placeholder="Name" />
+                                            <div className={`form-floating ${validation.memberNameValid !== null ? (validation.memberNameValid ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${validation.memberNameValid !== null ? (validation.memberNameValid ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    name="usersName"
+                                                    value={joinData.usersName}
+                                                    onChange={e => InputJoinChange(e)}
+                                                    onBlur={e => {
+                                                        // 유효성 검사
+                                                        const isValid = validateName(e.target.value);
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            memberNameValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="이름을 입력하세요"
+                                                />
                                                 <label>이름</label>
+                                            </div>
+
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={validation.memberNameValid === true ? "valid-feedback" : "invalid-feedback"}>
+                                                {validation.memberNameValid === true
+                                                    ? "" : "이름은 2자 이상, 7자 이하의 한글만 허용됩니다."}
                                             </div>
                                         </div>
 
                                         <big>영문 이름</big>
-                                        <div className="input-group mb-3">
+                                        <div className="input-group has-validation">
                                             <span className="input-group-text">ENG</span>
-                                            <div className="form-floating is-invalid">
-                                                <input type="text" className="form-control is-invalid" name="memberEngName" value={joinData.memberEngName} onChange={e => InputJoinChange(e)} placeholder="Eng Name" />
+                                            <div className={`form-floating ${validation.memberEngNameValid !== null ? (validation.memberEngNameValid ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${validation.memberEngNameValid !== null ? (validation.memberEngNameValid ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    name="memberEngName"
+                                                    value={joinData.memberEngName}
+                                                    onChange={e => InputJoinChange(e)}
+                                                    onBlur={e => {
+                                                        // 유효성 검사
+                                                        const isValid = validateEngName(e.target.value);
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            memberEngNameValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="Eng Name"
+                                                />
                                                 <label>영문 이름</label>
                                             </div>
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={validation.memberEngNameValid === true ? "valid-feedback" : "invalid-feedback"}>
+                                                {validation.memberEngNameValid === true
+                                                    ? ""
+                                                    : joinData.memberEngName === ''
+                                                        ? "영문 이름을 입력하세요."
+                                                        : "영문 이름 형식이 올바르지 않습니다."}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-4">
+                                            영문 이름은 2~10자 이내의 영어만 허용되며 First LastName 형식만 허용됩니다.
                                         </div>
 
                                         <big>전화 번호</big>
-                                        <div className="input-group mb-3">
+                                        <div className="input-group has-validation">
                                             <span className="input-group-text"><IoCall /></span>
-                                            <div className="form-floating is-invalid">
-                                                <input type="tel" className="form-control is-invalid" name="usersContact" value={joinData.usersContact} onChange={e => InputJoinChange(e)} placeholder="전화 번호" />
-                                                <label>영문 이름</label>
+                                            <div className={`form-floating ${validation.usersContactValid === true ? 'is-valid' : validation.usersContactValid === false ? 'is-invalid' : ''}`}>
+                                                <input
+                                                    type="tel"
+                                                    className={`form-control ${validation.usersContactValid === true ? 'is-valid' : validation.usersContactValid === false ? 'is-invalid' : ''}`} // 유효성 검사에 따른 클래스
+                                                    name="usersContact"
+                                                    value={joinData.usersContact}
+                                                    onChange={e => {
+                                                        InputJoinChange(e);
+                                                    }}
+                                                    onBlur={e => {
+                                                        const isValid = validateContact(e.target.value); // 전화번호 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersContactValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="전화 번호"
+                                                />
+                                                <label>전화 번호</label>
                                             </div>
+
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={validation.usersContactValid === true ? "valid-feedback" : "invalid-feedback"}>
+                                                {validation.usersContactValid === true
+                                                    ? "전화번호가 유효합니다!"
+                                                    : joinData.usersContact.trim() === ''
+                                                        ? "전화번호를 입력해주세요."
+                                                        : "전화번호 형식이 올바르지 않습니다."}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-3">
+                                            ex : 01012345678
                                         </div>
 
                                         <big>생년월일</big>
-                                        <div className="input-group mb-3">
-                                            <span className="input-group-text">Birth</span>
-                                            <div className="form-floating is-invalid">
-                                                {/* 디자인 변경 찾는중 */}
-                                                <input type="date" className="form-control is-invalid" name="memberBirth" onChange={e => InputJoinChange(e)}
-                                                    max={new Date().toISOString().split('T')[0]} // 오늘 이후 날짜 선택 불가
-                                                />
-                                                <label>생년월일</label>
+                                        <div className="mb-3 py-1">
+                                            <label htmlFor="datePicker" className="form-label">
+                                                <IoCalendar className="me-2" /> {/* 아이콘 간격 조정 */}
+                                            </label>
+                                            <DatePicker
+                                                id="datePicker"
+                                                selected={joinData.memberBirth}
+                                                onChange={(date) => {
+                                                    setJoinData(prev => ({
+                                                        ...prev,
+                                                        memberBirth: date
+                                                    }));
+                                                    setValidation(prev => ({
+                                                        ...prev,
+                                                        memberBirthValid: date ? true : false,
+                                                    }));
+                                                }}
+                                                maxDate={new Date()}
+                                                className={`form-control ${validation.memberBirthValid ? 'is-valid' : validation.memberBirthValid === false ? 'is-invalid' : ''}`}
+                                                placeholderText="생일을 선택하세요"
+                                                wrapperClassName="date-picker" // 스타일링을 위해 wrapperClassName 추가
+                                            />
+                                            <div className="valid-feedback"></div>
+                                            <div className="invalid-feedback">
+                                                {validation.memberBirthValid === false ? "유효한 생일을 선택하세요." : ""}
                                             </div>
                                         </div>
 
                                         <big>성별</big>
                                         <div className='mb-3'>
                                             <div className="form-check form-check-inline">
-                                                <input className="form-check-input" type="radio" name="memberGender" id="inlineRadio1" value="M" onChange={e => InputJoinChange(e)} />
+                                                <input
+                                                    className={`form-check-input ${validation.memberGenderValid === false ? 'is-invalid' : ''}`}
+                                                    type="radio"
+                                                    name="memberGender"
+                                                    id="inlineRadio1"
+                                                    value="M"
+                                                    onChange={(e) => {
+                                                        setJoinData(prev => ({
+                                                            ...prev,
+                                                            memberGender: e.target.value,
+                                                        }));
+
+                                                        // 유효성 검사: 선택된 값이 있을 때 valid로 설정
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            memberGenderValid: e.target.value ? true : false,
+                                                        }));
+                                                    }}
+                                                    checked={joinData.memberGender === 'M'}
+                                                />
                                                 <label className="form-check-label" htmlFor="inlineRadio1">남자</label>
                                             </div>
                                             <div className="form-check form-check-inline">
-                                                <input className="form-check-input" type="radio" name="memberGender" id="inlineRadio2" value="F" onChange={e => InputJoinChange(e)} />
+                                                <input
+                                                    className={`form-check-input ${validation.memberGenderValid === false ? 'is-invalid' : ''}`}
+                                                    type="radio"
+                                                    name="memberGender"
+                                                    id="inlineRadio2"
+                                                    value="F"
+                                                    onChange={(e) => {
+                                                        setJoinData(prev => ({
+                                                            ...prev,
+                                                            memberGender: e.target.value,
+                                                        }));
+
+                                                        // 유효성 검사: 선택된 값이 있을 때 valid로 설정
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            memberGenderValid: e.target.value ? true : false,
+                                                        }));
+                                                    }}
+                                                    checked={joinData.memberGender === 'F'}
+                                                />
                                                 <label className="form-check-label" htmlFor="inlineRadio2">여자</label>
+                                            </div>
+                                            {/* 유효성 검사 피드백 */}
+                                            <div className="invalid-feedback">
+                                                {validation.memberGenderValid === false ? "성별을 선택하세요." : ""}
                                             </div>
                                         </div>
 
+
                                         <big>이메일</big>
-                                        <div className="input-group mb-3" style={{ width: '80%' }}>
+                                        <div className="input-group mb-4" style={{ width: '80%' }}>
                                             <div className="form-floating">
                                                 <input
                                                     type="text"
-                                                    className="form-control"
+                                                    className={`form-control ${validation.usersEmailValid === false && emailId ? 'is-invalid' : validation.usersEmailValid ? 'is-valid' : ''}`}
                                                     placeholder="이메일을 입력하세요"
-                                                    value={emailId} // 상태를 value로 설정
-                                                    onChange={handleIdChange} // 변경 핸들러 설정
+                                                    value={emailId}
+                                                    onChange={handleIdChange}
                                                     required
                                                 />
                                                 <label>ID</label>
@@ -502,15 +880,20 @@ const Login = () => {
                                             <div className="form-floating">
                                                 <input
                                                     type="text"
-                                                    className="form-control"
-                                                    placeholder="도메인을 입력하세요"
-                                                    value={domain} // 상태를 value로 설정
-                                                    onChange={handleDomainChange} // 변경 핸들러 설정
+                                                    className={`form-control ${validation.usersEmailValid === false && domain ? 'is-invalid' : validation.usersEmailValid ? 'is-valid' : ''}`}
+                                                    placeholder="도메인"
+                                                    value={domain}
+                                                    onChange={handleDomainChange}
                                                     required
                                                 />
                                                 <label>Domain</label>
                                             </div>
                                         </div>
+                                        {validation.usersEmailValid === false && (
+                                            <div className="invalid-feedback" style={{ display: 'block' }}>
+                                                유효한 이메일 형식을 입력하세요.
+                                            </div>
+                                        )}
 
 
                                     </div>
@@ -530,7 +913,7 @@ const Login = () => {
                                             <button
                                                 className='btn btn-primary'
                                                 onClick={handleNext}
-                                                disabled={currentPage === totalPages - 1}
+                                                disabled={currentPage === totalPages - 1 || !isBasicValid}
                                             >
                                                 다음
                                             </button>
@@ -544,7 +927,7 @@ const Login = () => {
                                     {/* 프로그레스 바 추가 */}
                                     <div className="progress my-3"> {/* 변경 사항: 프로그레스 바 컨테이너 추가 */}
                                         <div
-                                            className="progress-bar"
+                                            className="progress-bar bg-success progress-bar-striped progress-bar-animated"
                                             role="progressbar"
                                             style={{ width: `${calculateProgress()}%` }} // 변경 사항: 프로그레스 바 너비 설정
                                             aria-valuenow={calculateProgress()}
@@ -554,69 +937,371 @@ const Login = () => {
                                         </div>
                                     </div>
 
-                                    <big>항공사 이름</big>
-                                    <div className="input-group mb-3">
-                                        <span className="input-group-text">항공사</span>
-                                        <div className="form-floating is-invalid">
-                                            <input type="text" className="form-control is-invalid" placeholder="Airline Name" />
-                                            <label>Airline Name</label>
+
+
+                                    {/* 페이지 1 */}
+                                    <div className={`page ${currentPage !== 0 ? 'd-none' : ''}`}> {/* 변경 사항: currentPage에 따라 클래스 적용 */}
+
+                                        <big>아이디</big>
+                                        <div className="input-group has-validation">
+                                            <span className="input-group-text">ID</span>
+                                            <div className={`form-floating ${isDuplicate || (validation.usersIdValid === false) ? 'is-invalid' : (validation.usersIdValid ? 'is-valid' : '')}`}>
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${isDuplicate || (validation.usersIdValid === false) ? 'is-invalid' : (validation.usersIdValid ? 'is-valid' : '')}`}
+                                                    placeholder="아이디"
+                                                    name="usersId"
+                                                    value={joinData.usersId}
+                                                    onChange={e => {
+                                                        InputJoinChange(e);
+                                                    }}
+                                                    onInput={e => {
+                                                        const userId = e.target.value; // 현재 입력된 값을 가져옴
+
+                                                        // 빈 문자열 체크
+                                                        if (userId.trim() === '') {
+                                                            setValidation(prev => ({
+                                                                ...prev,
+                                                                usersIdValid: null, // 유효성 초기화
+                                                            }));
+                                                            setIsDuplicate(false); // 중복 여부 초기화
+                                                            return; // 더 이상 진행하지 않음
+                                                        }
+
+                                                        InputJoinChange(e); // 입력 변경 함수 호출
+                                                        const isValid = validateUserId(userId); // 개별 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersIdValid: isValid,
+                                                        }));
+
+                                                        CheckDuplicateUserId(userId); // 현재 입력된 값으로 중복 검사
+                                                    }}
+                                                    id="floatingUserId" // 아이디 추가
+                                                />
+                                                <label htmlFor="floatingUserId">아이디</label>
+                                            </div>
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={`${isDuplicate ? 'invalid-feedback' : (validation.usersIdValid ? 'valid-feedback' : 'invalid-feedback')}`}>
+                                                {isDuplicate // 중복 여부 체크
+                                                    ? "이미 존재하는 아이디입니다." // 중복 시 피드백
+                                                    : validation.usersIdValid === true
+                                                        ? "아주 멋진 아이디네요!" // 유효성 검사가 통과했을 때
+                                                        : joinData.usersId.trim() === ''
+                                                            ? "아이디를 입력해주세요." // 빈 입력 시 피드백
+                                                            : validation.usersIdValid === false && joinData.usersId.trim() !== ''
+                                                                ? "아이디 형식이 올바르지 않습니다." // 유효성 검사 실패 시 피드백
+                                                                : null}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-4">
+                                            아이디는 소문자 알파벳으로 시작하며, 4~19자 사이의 길이로 소문자와 숫자로만 구성되어야 합니다.
+                                        </div>
+
+                                        <big>패스워드</big>
+                                        <div className="input-group has-validation">
+                                            <span className="input-group-text">PW</span>
+                                            <div className={`form-floating ${validation.usersPasswordValid !== null ? (validation.usersPasswordValid ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    className={`form-control ${validation.usersPasswordValid !== null ? (validation.usersPasswordValid ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    name='usersPassword'
+                                                    value={joinData.usersPassword}
+                                                    onChange={e => {
+                                                        InputJoinChange(e); // 입력 변경 함수 호출
+                                                        const isValid = validatePassword(e.target.value); // 개별 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersPasswordValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="패스워드를 입력하세요"
+                                                    id="floatingPassword" // 아이디 추가
+                                                />
+                                                <label htmlFor="floatingPassword">패스워드</label>
+                                                <span
+                                                    className="position-absolute"
+                                                    style={{ right: '30px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}
+                                                    onClick={togglePasswordVisibility}
+                                                >
+                                                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                                                </span>
+                                            </div>
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={`${validation.usersPasswordValid === true ? 'valid-feedback' : 'invalid-feedback'}`}>
+                                                {validation.usersPasswordValid === true
+                                                    ? "유효한 비밀번호입니다!"
+                                                    : joinData.usersPassword.trim() === ''
+                                                        ? "비밀번호를 입력해주세요."
+                                                        : "비밀번호 형식이 올바르지 않습니다."}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-5">
+                                            비밀번호는 최소 8자 이상이어야 하며, 숫자, 특수 문자(!, @, #, $), 그리고 대문자가 각각 하나 이상 포함되어야 합니다.
+                                        </div>
+
+                                        <big>비밀번호 재확인</big>
+                                        <div className="input-group has-validation mb-5">
+                                            <span className="input-group-text">PW</span>
+                                            <div className={`form-floating ${validation.passwordMatch !== null ? (validation.passwordMatch ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type={showPasswordRe ? 'text' : 'password'}
+                                                    value={pwCheck}
+                                                    onChange={e => {
+                                                        const value = e.target.value;
+                                                        setPwCheck(value);
+                                                    }}
+                                                    onBlur={e => {
+                                                        const value = e.target.value;
+                                                        setPwCheck(value);
+
+                                                        // 비밀번호 일치 여부 확인
+                                                        const isMatch = value.trim() !== '' && joinData.usersPassword === value;
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            passwordMatch: isMatch,
+                                                        }));
+                                                    }}
+                                                    className={`form-control ${validation.passwordMatch !== null ? (validation.passwordMatch ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    placeholder="패스워드를 입력하세요"
+                                                    id="floatingPasswordCheck" // 아이디 추가
+                                                />
+                                                <label htmlFor="floatingPasswordCheck">패스워드 확인</label>
+                                                <span
+                                                    className="position-absolute"
+                                                    style={{ right: '30px', top: '50%', transform: 'translateY(-50%)' }}
+                                                    onClick={togglePasswordCheckVisibility}
+                                                >
+                                                    {showPasswordRe ? <FiEyeOff /> : <FiEye />}
+                                                </span>
+                                            </div>
+                                            <div className="invalid-feedback">패스워드가 일치하지 않습니다.</div>
                                         </div>
                                     </div>
-                                    <big>이메일</big>
-                                    <div className="input-group has-validation mb-3">
-                                        <span className="input-group-text">@</span>
-                                        <div className="form-floating is-invalid flex-grow-1">
-                                            <input type="email" className="form-control is-invalid" placeholder="이메일을 입력하세요" />
-                                            <label>이메일</label>
+
+
+
+                                    {/* 페이지 2 */}
+                                    <div className={`page ${currentPage !== 1 ? 'd-none' : ''}`}> {/* 변경 사항: currentPage에 따라 클래스 적용 */}
+
+                                        <big>이름</big>
+                                        <div className="input-group has-validation mb-4">
+                                            <span className="input-group-text">Name</span>
+                                            <div className={`form-floating ${validation.memberNameValid !== null ? (validation.memberNameValid ? 'is-valid' : 'is-invalid') : ''}`}>
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${validation.memberNameValid !== null ? (validation.memberNameValid ? 'is-valid' : 'is-invalid') : ''}`}
+                                                    name="usersName"
+                                                    value={joinData.usersName}
+                                                    onChange={e => InputJoinChange(e)}
+                                                    onBlur={e => {
+                                                        // 유효성 검사
+                                                        const isValid = validateName(e.target.value);
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            memberNameValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="이름을 입력하세요"
+                                                />
+                                                <label>이름</label>
+                                            </div>
+
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={validation.memberNameValid === true ? "valid-feedback" : "invalid-feedback"}>
+                                                {validation.memberNameValid === true
+                                                    ? "" : "이름은 2자 이상, 7자 이하의 한글만 허용됩니다."}
+                                            </div>
                                         </div>
-                                        <div className="invalid-feedback">
-                                            Please choose a username.
+
+                                        <big>항공사 이름</big>
+                                        <div className="input-group mb-4">
+                                            <span className="input-group-text">Name</span>
+                                            <div className="form-floating">
+                                                <input type="text"
+                                                    className="form-control"
+                                                    placeholder="Airline Name"
+                                                    value={joinData.airlineName}
+                                                    onChange={e => InputJoinChange(e)}
+                                                    name="airlineName"
+                                                />
+                                                <label>Airline Name</label>
+                                            </div>
                                         </div>
+
+                                        <big>항공사 번호</big>
+                                        <div className="input-group mb-4">
+                                            <span className="input-group-text"><MdAirlines /></span>
+                                            <div className="form-floating">
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder="Airline No"
+                                                    value={joinData.airlineNo}
+                                                    name="airlineNo"
+                                                    onChange={e => InputJoinChange(e)}
+                                                    onKeyDown={(e) => {
+                                                        // 숫자(0-9)와 백스페이스, 화살표 키, Delete 키만 허용
+                                                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Delete') {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
+                                                    onInput={e => {
+                                                        // 현재 입력된 값을 가져와 숫자가 아닌 경우 필터링
+                                                        const value = e.target.value;
+                                                        const filteredValue = value.replace(/[^0-9]/g, ''); // 숫자가 아닌 문자를 제거
+                                                        if (value !== filteredValue) {
+                                                            InputJoinChange({ target: { name: 'airlineNo', value: filteredValue } });
+                                                        }
+                                                    }}
+                                                />
+                                                <label>Airline Number</label>
+                                            </div>
+                                        </div>
+
+
+                                        <big>전화 번호</big>
+                                        <div className="input-group has-validation">
+                                            <span className="input-group-text"><IoCall /></span>
+                                            <div className={`form-floating ${validation.usersContactValid === true ? 'is-valid' : validation.usersContactValid === false ? 'is-invalid' : ''}`}>
+                                                <input
+                                                    type="tel"
+                                                    className={`form-control ${validation.usersContactValid === true ? 'is-valid' : validation.usersContactValid === false ? 'is-invalid' : ''}`} // 유효성 검사에 따른 클래스
+                                                    name="usersContact"
+                                                    value={joinData.usersContact}
+                                                    onChange={e => {
+                                                        InputJoinChange(e);
+                                                    }}
+                                                    onBlur={e => {
+                                                        const isValid = validateContact(e.target.value); // 전화번호 유효성 검사
+                                                        setValidation(prev => ({
+                                                            ...prev,
+                                                            usersContactValid: isValid,
+                                                        }));
+                                                    }}
+                                                    placeholder="전화 번호"
+                                                />
+                                                <label>전화 번호</label>
+                                            </div>
+
+                                            {/* 유효성 검사에 따른 피드백 */}
+                                            <div className={validation.usersContactValid === true ? "valid-feedback" : "invalid-feedback"}>
+                                                {validation.usersContactValid === true
+                                                    ? "전화번호가 유효합니다!"
+                                                    : joinData.usersContact.trim() === ''
+                                                        ? "전화번호를 입력해주세요."
+                                                        : "전화번호 형식이 올바르지 않습니다."}
+                                            </div>
+                                        </div>
+                                        <div className="form-text text-muted mb-3">
+                                            ex : 01012345678
+                                        </div>
+
+                                        <big>이메일</big>
+                                        <div className="input-group mb-4" style={{ width: '90%' }}>
+                                            <div className="form-floating">
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${validation.usersEmailValid === false && emailId ? 'is-invalid' : validation.usersEmailValid ? 'is-valid' : ''}`}
+                                                    placeholder="이메일을 입력하세요"
+                                                    value={emailId}
+                                                    onChange={handleIdChange}
+                                                    required
+                                                />
+                                                <label>ID</label>
+                                            </div>
+                                            <span className="input-group-text">@</span>
+                                            <div className="form-floating">
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${validation.usersEmailValid === false && domain ? 'is-invalid' : validation.usersEmailValid ? 'is-valid' : ''}`}
+                                                    placeholder="도메인"
+                                                    value={domain}
+                                                    onChange={handleDomainChange}
+                                                    required
+                                                />
+                                                <label>Domain</label>
+                                            </div>
+                                        </div>
+                                        {validation.usersEmailValid === false && (
+                                            <div className="invalid-feedback" style={{ display: 'block' }}>
+                                                유효한 이메일 형식을 입력하세요.
+                                            </div>
+                                        )}
+
+
+
+
                                     </div>
-                                    <big>비밀번호</big>
-                                    <div className="input-group has-validation mb-3">
-                                        <span className="input-group-text">PW</span>
-                                        <div className="form-floating is-invalid flex-grow-1">
-                                            <input type={showPassword ? 'text' : 'password'} className="form-control is-invalid" placeholder="비밀번호를 입력하세요" required />
-                                            <label>패스워드</label>
+
+                                    {/* 네비게이션 버튼 (회원인 경우) */}
+                                    <div className="row mt-3">
+                                        <div className="col text-start">
+                                            <button
+                                                className='btn btn-secondary'
+                                                onClick={handlePrev}
+                                                disabled={currentPage === 0}
+                                            >
+                                                이전
+                                            </button>
                                         </div>
-                                        <div className="invalid-feedback">
-                                            Please choose a username.
-                                        </div>
-                                    </div>
-                                    <div className="form-check mb-3">
-                                        <input type="checkbox" className="form-check-input" id="showPasswordCheckbox" onChange={togglePasswordVisibility} />
-                                        <label className="form-check-label" htmlFor="showPasswordCheckbox">Show Password</label>
-                                    </div>
-                                    <big>비밀번호 재확인</big>
-                                    <div className="input-group has-validation mb-3">
-                                        <span className="input-group-text border">PW</span>
-                                        <div className="form-floating is-valid flex-grow-1">
-                                            <input type='password' className="form-control is-valid" placeholder="비밀번호 확인" />
-                                            <label>PassWord Re</label>
-                                        </div>
-                                        <div className="invalid-feedback">
-                                            입력하신 비밀번호와 일치하지 않습니다
+                                        <div className="col text-end">
+                                            <button
+                                                className='btn btn-primary'
+                                                onClick={handleNext}
+                                                disabled={currentPage === totalPages - 1 || !isBasicValid}
+                                            >
+                                                다음
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
+
                             )}
-
-
-
-
-
                         </div>
                         <div className="modal-footer">
                             <button type="button" className="btn btn-primary" onClick={() => {
-                                // 여기에서 회원가입 요청 로직을 구현합니다.
-                                sendData();
-                                alert("가입 요청을 처리합니다!");
+                                if (userType === 'MEMBER') {
+                                    // 제외할 변수들
+                                    const excludedKeys = ['airlineIdValid', 'airlineNameValid'];
+
+                                    // 모든 유효성 검사 상태가 true인지 확인 (제외할 변수 포함)
+                                    const isAllValid = Object.entries(validation)
+                                        .filter(([key]) => !excludedKeys.includes(key)) // 제외할 변수
+                                        .every(([, value]) => value === true);
+
+                                    if (isAllValid) {
+                                        sendData(); // 모든 필드가 유효할 경우 데이터 전송
+                                        alert("MEMBER 타입의 가입 요청을 처리합니다!");
+
+                                    } else {
+                                        alert("유효하지 않은 필드가 있습니다. 확인해 주세요.");
+                                    }
+                                }
+                                else if (userType === 'AIRLINE') {
+                                    // 제외할 변수들
+                                    const excludedKeys = ['memberGenderValid', 'memberBirthValid', 'memberNameValid', 'memberEngNameValid', 'airlineIdValid', 'airlineNameValid'];
+
+                                    // 모든 유효성 검사 상태가 true인지 확인 (제외할 변수 포함)
+                                    const isAllValid = Object.entries(validation)
+                                        .filter(([key]) => !excludedKeys.includes(key)) // 제외할 변수
+                                        .every(([, value]) => value === true);
+
+                                    if (isAllValid) {
+                                        sendData(); // 모든 필드가 유효할 경우 데이터 전송
+                                        alert("AIRLINE 타입의 가입 요청을 처리합니다!");
+
+                                    } else {
+                                        alert("유효하지 않은 필드가 있습니다. 확인해 주세요.");
+                                    }
+                                } else {
+                                    alert("전송이 유효하지 않습니다 다시 확인해 주세요");
+                                }
                             }}>가입하기</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 };

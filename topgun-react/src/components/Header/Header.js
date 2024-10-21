@@ -61,6 +61,11 @@ const Header = () => {
                                 </a>
                             </li>
                             <li>
+                                <a href="/admin/list" className="nav-link px-2 text-white">
+                                    AdminFlight
+                                </a>
+                            </li>
+                            <li>
                                 <NavLink to="/payment" className="nav-link px-2 text-white">
                                     payment
                                 </NavLink>
@@ -68,6 +73,7 @@ const Header = () => {
                             <li>
                                 <a href="/notice" className="nav-link px-2 text-white">
                                     notice
+
                                 </a>
                             </li>
                         </ul>

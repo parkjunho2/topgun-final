@@ -3,24 +3,37 @@ package com.kh.topgunFinal.restcontroller;
 import org.springframework.web.bind.annotation.RestController;
 import com.kh.topgunFinal.dao.UserDao;
 import com.kh.topgunFinal.dao.UserTokenDao;
+import com.kh.topgunFinal.dto.AirlineDto;
+import com.kh.topgunFinal.dto.MemberDto;
 import com.kh.topgunFinal.dto.UserDto;
 import com.kh.topgunFinal.dto.UserTokenDto;
 import com.kh.topgunFinal.error.TargetNotFoundException;
 import com.kh.topgunFinal.service.TokenService;
+import com.kh.topgunFinal.vo.InfoResponseVO;
 import com.kh.topgunFinal.vo.JoinRequestVO;
 import com.kh.topgunFinal.vo.UserClaimVO;
 import com.kh.topgunFinal.vo.UserLoginRequestVO;
 import com.kh.topgunFinal.vo.UserLoginResponseVO;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @CrossOrigin(origins = "http://localhost:3000") // 컨트롤러에서 설정
 @RestController
@@ -120,9 +133,15 @@ public class UserRestController {
 		return userDto;
 	}
 
+	@PostMapping("/checkId")
+	public ResponseEntity<Boolean> checkDuplicateUserId(@RequestParam String userId) {
+		UserDto user = userDao.selectOne(userId);
+		boolean isDuplicate = (user != null); // 사용자가 존재하면 중복
+		return ResponseEntity.ok().body(isDuplicate);
+	}
+
 	// 회원 등록 기능
 	@PostMapping("/join")
-	@Transactional
 	public void join(@RequestBody JoinRequestVO vo) {
 		System.out.println("vo = " + vo);
 
@@ -130,8 +149,10 @@ public class UserRestController {
 		UserDto userDto = new UserDto();
 
 		// 상세 회원 정보 저장 객체 생성
+		MemberDto memberDto = new MemberDto();
 
 		// 항공사 회원 정보 저장 객체 생성
+		AirlineDto airlineDto = new AirlineDto();
 
 		if (vo.getUsersType().equals("MEMBER")) {
 			// MEMBER 유형에 대한 처리
@@ -142,12 +163,18 @@ public class UserRestController {
 			userDto.setUsersEmail(vo.getUsersEmail());
 			userDto.setUsersContact(vo.getUsersContact());
 
-			System.out.println(userDto);
+			// ZonedDateTime으로 변환
+			ZonedDateTime zonedDateTime = ZonedDateTime.parse(vo.getMemberBirth());
 
-			System.out.println("하이~");
-			System.out.println(userDto);
+			// LocalDateTime으로 변환 (UTC 시간대에서 시스템 기본 시간대로 변환)
+			LocalDateTime localDateTime = zonedDateTime.withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
 
-			userDao.insert(userDto);
+			memberDto.setMemberBirth(localDateTime);
+			memberDto.setMemberEngName(vo.getMemberEngName());
+			memberDto.setMemberId(vo.getUsersId());
+			memberDto.setMemberGender(vo.getMemberGender());
+
+			userDao.insertMember(userDto, memberDto);
 		} else if (vo.getUsersType().equals("AIRLINE")) {
 			// AIRLINE 유형에 대한 처리
 			userDto.setUsersId(vo.getUsersId());
@@ -157,12 +184,33 @@ public class UserRestController {
 			userDto.setUsersEmail(vo.getUsersEmail());
 			userDto.setUsersContact(vo.getUsersContact());
 
-			System.out.println("빠이~");
+			airlineDto.setUserId(vo.getUsersId());
+			airlineDto.setAirlineNo(vo.getAirlineNo());
+			airlineDto.setAirlineName(vo.getAirlineName());
 
+			userDao.insertAirLine(userDto, airlineDto);
 		} else {
 			return; // 사용자의 유형이 null일 경우 반환
 		}
 
 	}
+
+	@PostMapping("/myInfo")
+	public InfoResponseVO getMyInfo(@RequestBody UserClaimVO userClaim) {
+		String userId = userClaim.getUserId();
+		String userType = userClaim.getUserType();
+
+		InfoResponseVO response = userDao.getMyInfo(userId, userType);
+
+		return response;
+	}
+	
+	//정보 수정
+//	@PutMapping("/update")
+//	public boolean putMethodName(@RequestBody String entity) {
+//		//TODO: process PUT request
+//		
+//		return entity;
+//	}
 
 }

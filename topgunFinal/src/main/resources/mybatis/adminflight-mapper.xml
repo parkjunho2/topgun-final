@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="admin">
+  
+
+<!-- 목록 -->
+<select id="list" resultType="FlightDto">
+    select * from flight order by flight_id asc
+</select>
+
+<!-- 상세 -->
+<select id="find" resultType="FlightDto">
+    select * from flight where flight_id = #{flight_id}
+</select>
+
+<!-- 수정 -->
+<update id="fix">
+    update flight 
+    set flight_status = #{flightStatus}
+    where flight_id = #{flightId}
+</update>
+
+  </mapper>

@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { FaTrash, FaEdit } from "react-icons/fa";
 import { Modal } from "bootstrap";
+import { FaMagnifyingGlass } from "react-icons/fa6";
 
 const Flight = () => {
     const [flightList, setFlightList] = useState([]);
@@ -136,9 +137,42 @@ const Flight = () => {
         openModal();
     }, [openModal]);
 
+    //검색창 관련
+    const [column, setColumn] = useState("flight_number");
+    const [keyword, setKeyword] = useState("");
+
+    const searchFlightList = useCallback(async ()=>{
+        if(keyword.length === 0) return;
+    const resp = await axios.get(`http://localhost:8080/flight/${column}/keyword/${encodeURIComponent(keyword)}`);
+    setFlightList(resp.data);
+}, [column, keyword, flightList]);
+
+    
     // 뷰
     return (
         <>
+
+        {/* 검색 화면 */}
+        <div className="row mt-2">
+            <div className="col-md-8 col-sm-10">
+                <div className="input-group">
+                    <select name="column" className="form-select w-auto"
+                        value={column} onChange={e=>setColumn(e.target.value)}>
+                        <option value="flight_number">항공편 번호</option>
+                        <option value="departure_airport">출발항공</option>
+                        <option value="arrival_airport">도착항공</option>
+                    </select>
+                    <input type="text" className="form-control w-auto"
+                        value={keyword} onChange={e=>setKeyword(e.target.value)}/>
+                    <button type="button" className="btn btn-secondary"
+                            onClick={searchFlightList}>
+                        <FaMagnifyingGlass/>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
             <div className="row mt-4">
                 <div className="col">
                     <table className="table table-striped">
@@ -244,8 +278,26 @@ const Flight = () => {
                                     <td>{flight.flightTotalSeat}</td>
                                     <td>{flight.flightStatus}</td>
                                     <td>
-                                        <FaEdit className="text-warning" onClick={() => editFlight(flight)} />
-                                        <FaTrash className="text-danger ms-2" onClick={() => deleteFlight(flight.flightId)} />
+                                    <FaEdit 
+                    className={`text-warning ${flight.flightStatus === "승인" ? "disabled" : ""}`} 
+                    onClick={() => {
+                        if (flight.flightStatus === "승인") {
+                            alert("수정이 불가능합니다.");
+                        } else {
+                            editFlight(flight);
+                        }
+                    }} 
+                />
+                <FaTrash 
+                    className={`text-danger ms-2 ${flight.flightStatus === "승인" ? "disabled" : ""}`} 
+                    onClick={() => {
+                        if (flight.flightStatus === "승인") {
+                            alert("삭제가 불가능합니다.");
+                        } else {
+                            deleteFlight(flight.flightId);
+                        }
+                    }} 
+                />
                                     </td>
                                 </tr>
                             ))}

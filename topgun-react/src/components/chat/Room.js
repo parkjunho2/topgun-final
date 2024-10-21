@@ -2,10 +2,22 @@ import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import './Room.css'; // CSS 파일 import
+import { useRecoilValue } from "recoil";
+import { loginState, memberLoadingState, userState } from "../../util/recoil";
 
 const Room = ()=>{
     //navigator
     const navigate = useNavigate();
+
+    //recoil
+    const user = useRecoilValue(userState);
+    const login = useRecoilValue(loginState);
+    const memberLoading = useRecoilValue(memberLoadingState);
+
+    //token
+    const accessToken = axios.defaults.headers.common["Authorization"];
+    const refreshToken = window.localStorage.getItem("refreshToken") 
+                || window.sessionStorage.getItem("refreshToken");
 
     //state
     const [roomList, setRoomList] = useState([]);
@@ -19,8 +31,22 @@ const Room = ()=>{
     const loadRoomList = useCallback(async ()=>{
         const resp = await axios.get("http://localhost:8080/room/");
         console.log(resp);
-        setRoomList(resp.data);
-    },[roomList]);
+
+        //userType에 따라 목록 필터링
+        const filterRoomList = resp.data.filter(room=>{
+            if(user.userType === "ADMIN"){
+                return room.roomNo === 21;
+            }
+            else if(user.userType === "AIRLINE"){
+                return room.roomNo === 22;
+            }
+            else if(user.userType === "MEMBER"){
+                return room.roomNo === 21 || room.roomNo === 22;
+            }
+            return false;
+        });
+        setRoomList(filterRoomList);
+    },[roomList, userState]);
 
     const enterRoom = useCallback(async (target)=>{
         if(target.join === 'Y'){
@@ -33,20 +59,27 @@ const Room = ()=>{
         }
     },[roomList]);
 
-    return(<>
-        {/* 방 목록 */}
-        <div className="row mt-4">
-            <div className="col">
-                <div className="list-group">
-                    {roomList.map(room=>(
-                        <li className="list-group-item" key={room.roomNo}>
-                            <h5 className="cusor" onClick={e=>enterRoom(room)}>{room.roomName}</h5>
-                        </li>
-                    ))}
-                </div>
+    return (
+        <div className="room-container">
+            <h3 className="room-title">채팅방 목록</h3>
+            <div className="list-group">
+
+                {roomList.map(room => (
+                    <div className="list-group-item" key={room.roomNo} onClick={() => enterRoom(room)}>
+                        <div className="room-item">
+                            <div className="room-name">
+                                <span className="badge bg-primary me-2">{room.roomNo}번</span>
+                                <span> {room.roomName}</span>
+                            </div>
+                            <div className="room-info">
+                                <span className="room-last-message">{room.lastMessage}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
-    </>);
+    );
 };
 
 export default Room;

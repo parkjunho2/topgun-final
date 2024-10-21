@@ -32,7 +32,6 @@ import com.kh.topgunFinal.vo.pay.PayReadyResponseVO;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @CrossOrigin(origins= {"http://localhost:3000"})
 @RestController
 @RequestMapping("/seats")
@@ -64,24 +63,27 @@ public class SeatsRestController {
 		UserClaimVO claimVO = //회원 아이디 불러옴
 				tokenService.check(tokenService.removeBearer(token));
 		
+		//total, itemName
 		StringBuffer buffer = new StringBuffer();
-		int total=0;
+		int total = 0;
 		for(SeatsQtyVO vo : request.getSeatsList()) {
 			SeatsDto seatsDto = seatsDao.selectOne(vo.getSeatsNo());
 			if(seatsDto==null) throw new TargetNotFoundException("결제 대상 없음");
 			total += seatsDto.getSeatsPrice() * vo.getQty();
-			if(buffer.isEmpty()) {
-				buffer.append(seatsDto.getSeatsRank());
+			if(buffer.isEmpty()) {//첫번째 좌석 번호 //메인이름
+				buffer.append("??"+"항공 ");
+				buffer.append(seatsDto.getSeatsRank()+" ");
+				buffer.append(seatsDto.getSeatsNo()+"번 좌석"); 
 			}
 		}
-		if(request.getSeatsList().size()>=2) {
+		if(request.getSeatsList().size()>=2) { //2좌석 이상 구매시
 			buffer.append(" 외 " +(request.getSeatsList().size()-1)+"건");
 		}
 		//payService #4에 body에 해당
 		//ready 준비 (입력)
 		PayReadyRequestVO requestVO = new PayReadyRequestVO();
 		requestVO.setPartnerOrderId(UUID.randomUUID().toString());//주문번호 Random
-		requestVO.setPartnerUserId(claimVO.getUserId());//token
+		requestVO.setPartnerUserId(claimVO.getUserId());//header token
 		requestVO.setItemName(buffer.toString());
 		requestVO.setTotalAmount(total);
 		requestVO.setApprovalUrl(request.getApprovalUrl());

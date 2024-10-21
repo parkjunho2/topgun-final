@@ -5,6 +5,8 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.js';
+import 'react-datepicker/dist/react-datepicker.css'; // 스타일 가져오기
+import './components/Global.css';
 import { RecoilRoot } from 'recoil';
 import { BrowserRouter } from 'react-router-dom';
 //axios customize

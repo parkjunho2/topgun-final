@@ -51,7 +51,7 @@ public class PayService {
 		return response;
 	}
 
-	// 결제 승인(approve) , ready response + pg_token을 입력후 다시 전송
+	// 결제 승인(approve) , ready (tid,partner_order_id, partner_user_id, pg_token)을 입력후 다시 전송
 	public PayApproveResponseVO approve(PayApproveRequestVO request) throws URISyntaxException {
 		//#2 다시 보낼 주소
 		URI uri = new URI("https://open-api.kakaopay.com/online/v1/payment/approve");

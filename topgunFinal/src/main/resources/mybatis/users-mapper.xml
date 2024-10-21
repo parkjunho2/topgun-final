@@ -10,20 +10,20 @@
 
 	<insert id="insert">
 		INSERT INTO users (
-        users_id,
-        users_name,
-        users_password,
-        users_email,
-        users_contact,
-        users_type
-    ) VALUES (
-        #{usersId},
-        #{usersName},
-        #{usersPassword},
-        #{usersEmail},
-        #{usersContact},
-        #{usersType}
-    )
+		users_id,
+		users_name,
+		users_password,
+		users_email,
+		users_contact,
+		users_type
+		) VALUES (
+		#{usersId},
+		#{usersName},
+		#{usersPassword},
+		#{usersEmail},
+		#{usersContact},
+		#{usersType}
+		)
 	</insert>
 
 	<select id="list" resultType="UserDto">
@@ -35,5 +35,56 @@
 		select * from users where users_id
 		= #{usersId}
 	</select>
+
+	<select id="findInfo" resultType="InfoResponseVO">
+		SELECT *
+		FROM users
+		<choose>
+			<when test="userType == 'AIRLINE'">
+				LEFT JOIN airline ON users.users_id = airline.user_id
+				WHERE users.USERS_TYPE = #{userType} AND users.users_id = #{userId}
+			</when>
+			<when test="userType == 'MEMBER'">
+				LEFT JOIN member ON users.users_id = member.member_id
+				WHERE users.USERS_TYPE = #{userType} AND users.users_id = #{userId}
+			</when>
+			<when test="userType == 'ADMIN'">
+				LEFT JOIN admin ON users.users_id = admin.users_id
+				WHERE users.USERS_TYPE = #{userType} AND users.users_id = #{userId}
+			</when>
+			<otherwise>
+				SELECT NULL
+			</otherwise>
+		</choose>
+	</select>
+
+	<!-- 회원 정보 상세 -->
+	<insert id="memberInsert">
+		INSERT INTO member(
+		MEMBER_ID,
+		MEMBER_ENG_NAME,
+		MEMBER_BIRTH,
+		MEMBER_GENDER
+		) VALUES (
+		#{memberId},
+		#{memberEngName},
+		#{memberBirth},
+		#{memberGender}
+		)
+	</insert>
+
+	<!-- 항공사 정보 상세 -->
+	<insert id="airlineInsert">
+		INSERT INTO airline(
+		USER_ID,
+		AIRLINE_NO,
+		AIRLINE_NAME
+		)
+		VALUES (
+		#{userId},
+		#{airlineNo},
+		#{airlineName}
+		)
+	</insert>
 
 </mapper>
