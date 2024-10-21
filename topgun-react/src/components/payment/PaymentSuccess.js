@@ -31,10 +31,10 @@ const PaymentSuccess=()=>{
                     partnerOrderId : partnerOrderId , 
                     pgToken : new URLSearchParams(window.location.search).get("pg_token"),
                     tid: window.sessionStorage.getItem("tid"),
-                    bookList: JSON.parse(window.sessionStorage.getItem("checkedBookList"))
+                    seatsList: JSON.parse(window.sessionStorage.getItem("checkedSeatsList"))
                 }
         );
-            setSeatsList(JSON.parse(Window.sessionStorage.getItem("checkedSeatsList")));
+            setSeatsList(JSON.parse(window.sessionStorage.getItem("checkedSeatsList")));
             setResult(true);
         }
         catch(e){

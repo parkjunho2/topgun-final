@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
 
 @Data
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-@JsonIgnoreProperties(ignoreUnknown =true)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)//언더바를 카멜케이스로 변환
+@JsonIgnoreProperties(ignoreUnknown =true)//받지 않을 정보는 무시
 public class PayReadyResponseVO {
 	private String tid;
 //	private String nextRedirectAppUrl;//앱결제
