@@ -9,7 +9,7 @@ CREATE TABLE Flight (
     departure_airport VARCHAR2(255) NOT NULL,
     arrival_airport VARCHAR2(255) NOT NULL,
     user_id VARCHAR2(255) NOT NULL,
-    flight_total_seat NUMBER NOT NULL,
+    flight_price NUMBER NOT NULL,
     flight_status CHAR(6) DEFAULT '대기'
 );
 
